@@ -10,28 +10,35 @@
 #!/usr/bin/env python
 from __future__ import print_function
 import sys
-import csv
 
-reader = csv.reader(sys.stdin)
-for row in reader:
-    if not row:
+current_key = None
+current_sum = 0
+
+for line in sys.stdin:
+    line = line.strip()
+    if not line:
         continue
-    # expected columns: State, PollingStation, Candidate, Votes
-    if len(row) < 4:
+    parts = line.split('\t')
+    if len(parts) != 2:
         continue
-    state = row[0].strip()
-    candidate = row[2].strip()
-    votes = row[3].strip()
-    # skip header
-    if state.lower() == 'state' and candidate.lower() == 'candidate':
-        continue
+    key, val = parts
     try:
-        v = int(votes)
+        v = int(val)
     except:
         continue
-    # Emit key as "State|Candidate" and value as votes
-    key = state + '|' + candidate
-    print("{0}\t{1}".format(key, v))
+    if current_key == key:
+        current_sum += v
+    else:
+        if current_key is not None:
+            state, candidate = current_key.split('|', 1)
+            print("{0}\t{1}\t{2}".format(state, candidate, current_sum))
+        current_key = key
+        current_sum = v
+
+# final key
+if current_key is not None:
+    state, candidate = current_key.split('|', 1)
+    print("{0}\t{1}\t{2}".format(state, candidate, current_sum))
     </pre>
 </body>
 </html>
