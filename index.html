@@ -7,38 +7,22 @@
 </head>
 <body>
     <pre>
-#!/usr/bin/env python
-from __future__ import print_function
-import sys
+# create input directory in HDFS and put file
+hdfs dfs -mkdir -p /user/$(whoami)/input
+hdfs dfs -put -f ~/votes.txt /user/$(whoami)/input/
 
-current_key = None
-current_sum = 0
+# find hadoop-streaming jar (print to confirm)
+STREAMING_JAR=$(ls /usr/lib/hadoop-mapreduce/hadoop-streaming*.jar 2>/dev/null | head -n1)
+echo "Using $STREAMING_JAR"
 
-for line in sys.stdin:
-    line = line.strip()
-    if not line:
-        continue
-    parts = line.split('\t')
-    if len(parts) != 2:
-        continue
-    key, val = parts
-    try:
-        v = int(val)
-    except:
-        continue
-    if current_key == key:
-        current_sum += v
-    else:
-        if current_key is not None:
-            state, candidate = current_key.split('|', 1)
-            print("{0}\t{1}\t{2}".format(state, candidate, current_sum))
-        current_key = key
-        current_sum = v
+# Run the streaming job (output directory must not exist already)
+hdfs dfs -rm -r -skipTrash /user/$(whoami)/output_votes 2>/dev/null || true
+hadoop jar $STREAMING_JAR \
+  -files /home/$(whoami)/mapper.py,/home/$(whoami)/reducer.py \
+  -mapper mapper.py -reducer reducer.py \
+  -input /user/$(whoami)/input/votes.txt \
+  -output /user/$(whoami)/output_votes
 
-# final key
-if current_key is not None:
-    state, candidate = current_key.split('|', 1)
-    print("{0}\t{1}\t{2}".format(state, candidate, current_sum))
     </pre>
 </body>
 </html>
